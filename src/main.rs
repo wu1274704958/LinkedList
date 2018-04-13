@@ -2,11 +2,6 @@ extern crate LinkedList;
 
 use LinkedList::LkdLt;
 
-use std::rc::Rc;
-use std::rc::Weak;
-use std::cell::RefCell;
-
-
 fn main() {
     let mut a = LkdLt::new();
 

@@ -1,3 +1,4 @@
+#![feature(nll)]
 use ::std::cell::RefCell;
 use ::std::rc::Rc;
 use ::std::fmt::Display;
@@ -28,8 +29,9 @@ impl<T> Node<T> {
     }
 }
 
+
 impl<'a, T> LkdLt<'a, T>
-    where T: fmt::Debug + Clone
+    where T: 'a + fmt::Debug + Clone
 {
     pub fn new() -> LkdLt<'a, T>
     {
@@ -44,24 +46,14 @@ impl<'a, T> LkdLt<'a, T>
         self.size = self.size + 1;
         let mut ne = Rc::new(RefCell::new(Node::new(val)));
 
-        let mut a: *mut Option<Rc<RefCell<Node<T>>>>;
-        unsafe {
-            a = &mut (self.head) as *mut Option<Rc<RefCell<Node<T>>>>;
+        let mut a = &mut self.head;
 
-            loop {
-                match *a {
-                    Some(ref nn) => {
-                        a = &mut (nn.borrow_mut().next_node) as *mut Option<Rc<RefCell<Node<T>>>>;
-                    }
-                    None => {
-                        *a = Some(ne);
-                        if self.size == 1 {
-                            self.now_iter = Some(&(*a));
-                        }
-                        break;
-                    }
-                }
-            }
+        while let &mut Some(ref n) = a {
+            a = unsafe{&mut (*(*n).as_ptr()).next_node};
+        }
+        *a = Some(ne);
+        if self.size == 1 {
+            self.now_iter = unsafe{Some(&(* (a as  *mut Option<Rc<RefCell<Node<T>>>>) )) };
         }
     }
     pub fn getSize(&self) -> u32 {
