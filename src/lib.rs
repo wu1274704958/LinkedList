@@ -188,7 +188,11 @@ impl<'a, T: Display> Display for LkdLt<'a, T> {
                 match *a {
                     Some(ref nn) => {
                         b = nn.borrow_mut().data.as_ptr() as *const T;
-                        write!(f, "{},", *b);
+                        if let None = nn.borrow_mut().next_node {
+                            write!(f, "{}", *b);
+                        }else{
+                            write!(f, "{},", *b);
+                        }
                         a = &(nn.borrow_mut().next_node) as *const Option<Rc<RefCell<Node<T>>>>;
                     }
                     None => {
