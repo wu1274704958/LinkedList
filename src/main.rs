@@ -57,6 +57,9 @@ fn main() {
     while let Some(n) = a.next(){
         println!("{}",n);
     }
-
     println!("Hello, world! {} size : {}",a, a.getSize());
+
+    let b: LkdLt<i32> = LkdLt::new();
+    
+    println!("b = {}",b);
 }
