@@ -3,6 +3,11 @@ extern crate LinkedList;
 use LinkedList::LkdLt;
 
 fn main() {
+    test1();
+}
+
+fn test1()
+{
     let mut a = LkdLt::new();
 
     a.add(7);
@@ -40,9 +45,9 @@ fn main() {
 
 
     for i in 0 .. 10
-    {
-        println!("{:?} ",a.get(i));
-    }
+        {
+            println!("{:?} ",a.get(i));
+        }
 
     match a.remove(0) {
         Ok(v) => println!("remove success {:?}",v),
@@ -58,8 +63,26 @@ fn main() {
         println!("{}",n);
     }
     println!("Hello, world! {} size : {}",a, a.getSize());
+}
 
+fn test2()
+{
     let b: LkdLt<i32> = LkdLt::new();
-    
+
+    println!("b = {}",b);
+}
+
+fn test3()
+{
+    let mut b: LkdLt<i32> = LkdLt::new();
+
+    b.add(100);
+    b.add(200);
+    println!("b = {}",b);
+    println!("{:?}",b.next());
+    b.remove(1);
+    println!("{:?}",b.next());
+
+
     println!("b = {}",b);
 }

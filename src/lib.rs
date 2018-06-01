@@ -1,17 +1,20 @@
-#![feature(nll)]
-use ::std::cell::RefCell;
-use ::std::rc::Rc;
-use ::std::fmt::Display;
-use ::std::fmt;
-use ::std::cell::RefMut;
-use ::std::cell::Ref;
-use ::std::convert;
-use ::std::iter::Iterator;
+
+use std::cell::RefCell;
+use std::rc::Rc;
+use std::fmt::Display;
+use std::fmt;
+use std::cell::RefMut;
+use std::cell::Ref;
+use std::convert;
+use std::iter::Iterator;
+use std::marker::PhantomData;
+
 
 pub struct LkdLt<'a, T: 'a> {
     size: u32,
     head: Option<Rc<RefCell<Node<T>>>>,
-    now_iter: Option<&'a Option<Rc<RefCell<Node<T>>>>>,
+    now_iter: Option<*const Option<Rc<RefCell<Node<T>>>>>,
+    phantomData : PhantomData<&'a T>
 }
 
 pub struct Node<T> {
@@ -39,21 +42,35 @@ impl<'a, T> LkdLt<'a, T>
             size: 0,
             head: None,
             now_iter: None,
+            phantomData:PhantomData
         }
+    }
+    pub unsafe fn get_end(&self) -> *mut Option<Rc<RefCell<Node<T>>>>
+    {
+        let mut a = (&self.head as *const Option<Rc<RefCell<Node<T>>>>) as *mut Option<Rc<RefCell<Node<T>>>>;
+        while let Some(ref n) = *a {
+            a = &mut (n.borrow_mut().next_node) as *mut Option<Rc<RefCell<Node<T>>>>;
+        }
+        a
+    }
+    pub unsafe fn get_for_index(&self,index:u32) -> *mut Option<Rc<RefCell<Node<T>>>>
+    {
+        let mut a = (&self.head as *const Option<Rc<RefCell<Node<T>>>>) as *mut Option<Rc<RefCell<Node<T>>>>;
+        for i in 0..index {
+            match *a {
+                Some(ref nn) => a = &mut (nn.borrow_mut().next_node) as *mut Option<Rc<RefCell<Node<T>>>>,
+                None => break
+            }
+        }
+        a
     }
     pub fn add(&mut self, val: T)
     {
         self.size = self.size + 1;
-        let mut ne = Rc::new(RefCell::new(Node::new(val)));
-
-        let mut a = &mut self.head;
-
-        while let &mut Some(ref n) = a {
-            a = unsafe{&mut (*(*n).as_ptr()).next_node};
-        }
-        *a = Some(ne);
-        if self.size == 1 {
-            self.now_iter = unsafe{Some(&(* (a as  *mut Option<Rc<RefCell<Node<T>>>>) )) };
+        let ne = Rc::new(RefCell::new(Node::new(val)));
+        let ptr = unsafe{self.get_end()};
+        unsafe {
+            *ptr = Some(ne);
         }
     }
     pub fn getSize(&self) -> u32 {
@@ -61,21 +78,15 @@ impl<'a, T> LkdLt<'a, T>
     }
     pub fn get(&self, index: u32) -> Result<&T, ()>
     {
-        if !(index < self.size) {
+        if index >= self.size {
             return Err(());
         }
         let mut c: *mut Node<T>;
-        let mut a: *const Option<Rc<RefCell<Node<T>>>>;
+        let mut a: *mut Option<Rc<RefCell<Node<T>>>>;
         unsafe {
-            a = &self.head as *const Option<Rc<RefCell<Node<T>>>>;
-            for i in 0..index {
-                match *a {
-                    Some(ref nn) => a = &nn.borrow_mut().next_node as *const Option<Rc<RefCell<Node<T>>>>,
-                    None => break
-                }
-            }
+            a = self.get_for_index(index);
             if let Some(ref n) = *a {
-                c = n.as_ptr() as *mut Node<T>;
+                c = n.as_ptr();
                 return Ok((*c).data.get_mut());
             } else {
                 return Err(());
@@ -84,21 +95,14 @@ impl<'a, T> LkdLt<'a, T>
     }
     pub fn set(&mut self, index: u32, val: T) -> Result<(), ()>
     {
-        if !(index < self.size) {
+        if index >= self.size {
             return Err(());
         }
         let mut a: *mut Option<Rc<RefCell<Node<T>>>>;
         let mut b: *mut T;
 
         unsafe {
-            a = &mut self.head;
-
-            for i in 0..index {
-                match *a {
-                    Some(ref nn) => a = &mut (nn.borrow_mut().next_node) as *mut Option<Rc<RefCell<Node<T>>>>,
-                    None => break
-                }
-            }
+            a = self.get_for_index(index);
             if let Some(ref n) = *a {
                 b = n.borrow_mut().data.as_ptr();
                 *b = val;
@@ -108,6 +112,7 @@ impl<'a, T> LkdLt<'a, T>
             }
         }
     }
+
     pub fn remove(&mut self, index: u32) -> Result<RefCell<T>, ()>
     {
         if !(index < self.size) {
@@ -153,11 +158,10 @@ impl<'a, T> LkdLt<'a, T>
                 if let Some(ref nn) = *a {
                     mid = Rc::clone(nn);
                     a = &mut (nn.borrow_mut().next_node) as *mut Option<Rc<RefCell<Node<T>>>>;
-                    if let Some(ref nnn) = *a
-                        {
-                            next = Rc::clone(nnn);
-                            (*last).next_node = Some(next);
-                        } else {
+                    if let Some(ref nnn) = *a {
+                        next = Rc::clone(nnn);
+                        (*last).next_node = Some(next);
+                    } else {
                         //下一个 没有值  直接删
                         (*last).next_node = None;
                     }
@@ -217,8 +221,8 @@ impl<'a, T: 'a> Iterator for LkdLt<'a, T> {
         unsafe {
             let mut refno: *const Option<Rc<RefCell<Node<T>>>>;
             match self.now_iter {
-                None => return None,
-                Some(n) => refno = n as *const Option<Rc<RefCell<Node<T>>>>
+                None =>  refno = &self.head as *const Option<Rc<RefCell<Node<T>>>>,
+                Some(n) => refno = n
             }
 
             match *refno {
@@ -231,8 +235,7 @@ impl<'a, T: 'a> Iterator for LkdLt<'a, T> {
                     return Some(&(*c));
                 }
                 None => {
-                    refno = &self.head as *const Option<Rc<RefCell<Node<T>>>>;
-                    self.now_iter = Some(&(*refno));
+                    self.now_iter = None;
                     return None;
                 }
             }
