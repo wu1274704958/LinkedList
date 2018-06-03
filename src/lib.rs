@@ -113,7 +113,7 @@ impl<'a, T> LkdLt<'a, T>
         }
     }
 
-    pub fn remove(&mut self, index: u32) -> Result<RefCell<T>, ()>
+    pub fn remove(&mut self, index: u32) -> Result<T, ()>
     {
         if !(index < self.size) {
             return Err(());
@@ -122,8 +122,6 @@ impl<'a, T> LkdLt<'a, T>
         let mut last: *mut Node<T>;
         let mut mid: Rc<RefCell<Node<T>>>;
         let mut next: Rc<RefCell<Node<T>>>;
-
-
         unsafe {
             a = &mut self.head as *mut Option<Rc<RefCell<Node<T>>>>;
 
@@ -143,7 +141,7 @@ impl<'a, T> LkdLt<'a, T>
                     return Err(());
                 }
                 self.size = self.size - 1;
-                return Ok(mid.borrow_mut().data.clone());
+                return Ok(mid.borrow_mut().data.clone().into_inner());
             }
 
             for i in 0..(index - 1) {
@@ -174,7 +172,7 @@ impl<'a, T> LkdLt<'a, T>
                 return Err(());
             }
             self.size = self.size - 1;
-            return Ok(mid.borrow_mut().data.clone());
+            return Ok(mid.borrow_mut().data.clone().into_inner());
         }
     }
 }

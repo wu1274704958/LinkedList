@@ -44,11 +44,11 @@ fn test1()
     a.add(79);
 
 
-    for i in 0 .. 10
-        {
-            println!("{:?} ",a.get(i));
-        }
-
+    for i in 0 .. 10 {
+        println!("one {:?} ",a.get(i));
+    }
+    println!("b = {}",a);
+    println!("------------------------------------------------------");
     match a.remove(0) {
         Ok(v) => println!("remove success {:?}",v),
         Err(()) => println!("remove default")
@@ -56,11 +56,11 @@ fn test1()
 
 
     while let Some(n) = a.next(){
-        println!("{}",n);
+        println!("two {}",n);
     }
-    println!("hsjhdjahjdhasjd");
+    println!("------------------------------------------------------");
     while let Some(n) = a.next(){
-        println!("{}",n);
+        println!("three {}",n);
     }
     println!("Hello, world! {} size : {}",a, a.getSize());
 }
@@ -78,11 +78,10 @@ fn test3()
 
     b.add(100);
     b.add(200);
+    b.add(300);
+    b.add(400);
+    b.add(500);
     println!("b = {}",b);
-    println!("{:?}",b.next());
-    b.remove(1);
-    println!("{:?}",b.next());
 
-
-    println!("b = {}",b);
+    println!("{:?}",b.max());
 }
